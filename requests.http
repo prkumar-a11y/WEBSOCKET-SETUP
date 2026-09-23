@@ -1,0 +1,58 @@
+### Proxy home
+GET http://localhost:8000/
+
+### Health checks through the proxy
+GET http://localhost:8000/ecommerce/health
+GET http://localhost:8000/trading/health
+GET http://localhost:8000/bidding/health
+
+### Read current service state
+GET http://localhost:8000/ecommerce/api/state
+GET http://localhost:8000/trading/api/state
+GET http://localhost:8000/bidding/api/state
+
+### Publish an e-commerce update
+POST http://localhost:8000/ecommerce/api/events
+Content-Type: application/json
+
+{
+  "productId": "SKU-1001",
+  "status": "back-in-stock",
+  "inventory": 42
+}
+
+### Publish a trading update
+POST http://localhost:8000/trading/api/events
+Content-Type: application/json
+
+{
+  "symbol": "AAPL",
+  "price": 212.50,
+  "change": 1.25,
+  "action": "quote-update"
+}
+
+### Publish a bidding update
+POST http://localhost:8000/bidding/api/events
+Content-Type: application/json
+
+{
+  "auctionId": "AUCTION-42",
+  "bidder": "demo-user",
+  "amount": 125,
+  "action": "new-bid"
+}
+
+### Chat help through the existing server
+GET http://localhost:8000/chat/help
+
+### WebSocket URLs for browser or wscat
+# ws://localhost:8000/chat
+# ws://localhost:8000/ecommerce
+# ws://localhost:8000/trading
+# ws://localhost:8000/bidding
+
+### Example WebSocket event payloads
+# {"type":"event","event":{"productId":"SKU-1001","status":"sold-out"}}
+# {"type":"event","event":{"symbol":"MSFT","price":510.25}}
+# {"type":"event","event":{"auctionId":"AUCTION-42","amount":150}}

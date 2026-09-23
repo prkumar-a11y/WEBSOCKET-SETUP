@@ -4,7 +4,8 @@ import sys
 
 import websockets
 
-SERVER_URI = "ws://localhost:8080"
+SERVER_URI = "ws://localhost:8081"
+HELP_TEXT = "Commands: /help shows this help, /quit or /exit disconnects. Enter a message to broadcast it to everyone."
 
 
 async def receive_messages(ws):
@@ -21,7 +22,11 @@ async def send_messages(ws, username):
     loop = asyncio.get_event_loop()
     while True:
         text = await loop.run_in_executor(None, input, "> ")
-        if text.strip().lower() in ("/quit", "/exit"):
+        command = text.strip().lower()
+        if command == "/help":
+            await ws.send(json.dumps({"type": "help"}))
+            continue
+        if command in ("/quit", "/exit"):
             break
         if text.strip():
             await ws.send(json.dumps({"type": "message", "text": text}))

@@ -4,7 +4,12 @@
   "description": "Node.js WebSocket chat room server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:commerce": "node ../services/ecommerce/server.js",
+    "start:trading": "node ../services/trading/server.js",
+    "start:bidding": "node ../services/bidding/server.js",
+    "start:proxy": "node ../proxy/gateway.js",
+    "start:all": "node ../start-all.js"
   },
   "dependencies": {
     "ws": "^8.18.0"

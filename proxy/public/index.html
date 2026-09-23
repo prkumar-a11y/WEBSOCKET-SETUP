@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebSocket Test Console</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,sans-serif;color:#172033;background:#edf2f7}
+    *{box-sizing:border-box}body{margin:0}.shell{max-width:1200px;margin:auto;padding:32px 20px}
+    header{margin-bottom:24px}h1{margin:0 0 8px;font-size:clamp(28px,4vw,46px);letter-spacing:-1px}header p{margin:0;color:#5c6b7a}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:#fff;border:1px solid #d8e0e8;border-radius:14px;padding:20px;box-shadow:0 8px 22px #243b5312}
+    .card h2{margin:0 0 4px;font-size:21px}.card p{margin:0 0 14px;color:#667585;font-size:14px}.status{font-size:13px;color:#b45309;margin-bottom:10px}.status.connected{color:#087443}
+    .log{height:150px;overflow:auto;background:#111827;color:#d8e4f0;border-radius:9px;padding:12px;font:13px ui-monospace,monospace;white-space:pre-wrap;margin-bottom:12px}
+    .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}input,button{width:100%;padding:10px;border-radius:8px;font:inherit}input{border:1px solid #c9d3df}button{border:0;background:#2563eb;color:#fff;cursor:pointer}button.secondary{background:#64748b}.wide{grid-column:1/-1}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}.summary div{background:#eef7f0;border-radius:7px;padding:8px;font-size:12px}.summary strong{display:block;color:#176b45;font-size:16px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}.shell{padding:22px 14px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <h1>WebSocket Test Console</h1>
+      <p>One browser page connected to Chat, E-Commerce, Trading, and Bidding through the proxy.</p>
+    </header>
+    <section class="grid">
+      <article class="card" data-service="chat">
+        <h2>Chat</h2><p>Send a message to every connected chat client.</p><div class="status">Connecting...</div><div class="log"></div>
+        <div class="controls"><input class="one" value="BrowserUser" placeholder="Username"><input class="two" placeholder="Message"><button class="send">Send message</button><button class="help secondary">Help</button></div>
+      </article>
+      <article class="card" data-service="ecommerce">
+        <h2>E-Commerce Live Updates</h2><p>Push inventory, price drops, and order status changes without refresh.</p><div class="status">Connecting...</div><div class="summary"><div>Inventory<strong class="inventoryValue">-</strong></div><div>Price Drop<strong class="priceValue">-</strong></div><div>Order Status<strong class="orderValue">-</strong></div></div><div class="log"></div>
+        <div class="controls"><select class="eventType"><option value="inventory">Inventory change</option><option value="price-drop">Price drop</option><option value="order-status">Order status</option></select><input class="one" value="SKU-1001" placeholder="Product or order ID"><input class="two" value="42" placeholder="Quantity, price, or status"><button class="send">Publish update</button><button class="help secondary">Help</button></div>
+      </article>
+      <article class="card" data-service="trading">
+        <h2>Trading Dashboard</h2><p>Publish live market quote events.</p><div class="status">Connecting...</div><div class="log"></div>
+        <div class="controls"><input class="one" value="AAPL" placeholder="Symbol"><input class="two" value="212.50" placeholder="Price"><button class="send">Publish quote</button><button class="help secondary">Help</button></div>
+      </article>
+      <article class="card" data-service="bidding">
+        <h2>Live Bidding</h2><p>Publish auction bid events in real time.</p><div class="status">Connecting...</div><div class="log"></div>
+        <div class="controls"><input class="one" value="AUCTION-42" placeholder="Auction ID"><input class="two" value="125" placeholder="Bid amount"><button class="send">Place bid</button><button class="help secondary">Help</button></div>
+      </article>
+    </section>
+  </main>
+  <script>
+    const configs = {
+      chat: { path:'/chat', event(data){ return data.type === 'message' ? `${data.username}: ${data.text}` : data.text || data.type; } },
+      ecommerce: { path:'/ecommerce', event(data){
+        const event = data.event;
+        if (event.type === 'inventory') return `${event.productId || 'product'} -> inventory ${event.quantity ?? event.inventory}`;
+        if (event.type === 'price-drop') return `${event.productId || 'product'} -> price $${event.price}`;
+        if (event.type === 'order-status') return `${event.orderId || 'order'} -> ${event.status}`;
+        return `${event.productId || 'product'} -> ${event.status || event.action || 'updated'}`;
+      } },
+      trading: { path:'/trading', event(data){
+        if(data.type==='trading-snapshot') return `Snapshot: BTC/ETH markets loaded`;
+        if(data.type==='market-update') return `Market stream: BTC $${data.markets.BTC.last} | ETH $${data.markets.ETH.last}`;
+        return `${data.event?.symbol || 'market'} -> ${data.event?.price || data.event?.action || 'updated'}`;
+      } },
+      bidding: { path:'/bidding', event(data){ return `${data.event.auctionId || 'auction'} -> bid ${data.event.amount || 'updated'}`; } }
+    };
+    const sockets = {};
+    async function parseMessage(data){ return JSON.parse(typeof data === 'string' ? data : await data.text()); }
+    function addLog(card, text){ const log=card.querySelector('.log'); log.textContent=`${new Date().toLocaleTimeString()}  ${text}\n`+log.textContent; }
+    function updateEcommerce(card, event){
+      if(event.type==='inventory'){card.querySelector('.inventoryValue').textContent=event.quantity ?? event.inventory ?? '-'; addLog(card,`${event.productId || 'product'} -> inventory ${event.quantity ?? event.inventory}`);}
+      if(event.type==='price-drop'){card.querySelector('.priceValue').textContent=`$${event.price ?? '-'}`; addLog(card,`${event.productId || 'product'} -> price $${event.price}`);}
+      if(event.type==='order-status'){card.querySelector('.orderValue').textContent=event.status || '-'; addLog(card,`${event.orderId || 'order'} -> ${event.status}`);}
+    }
+    function connect(card, name){
+      const config=configs[name]; const socket=new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}${config.path}`); sockets[name]=socket;
+      socket.onopen=()=>{ card.querySelector('.status').textContent='Connected'; card.querySelector('.status').classList.add('connected'); addLog(card,'Connected'); if(name==='chat') socket.send(JSON.stringify({type:'join',username:card.querySelector('.one').value})); };
+      socket.onmessage=async(event)=>{ const data=await parseMessage(event.data); if(data.type==='snapshot') addLog(card,`Snapshot loaded: ${data.state.events.length} events`); else if(name==='ecommerce' && data.type==='product-update') updateEcommerce(card,data.event); else addLog(card,config.event(data)); };
+      socket.onerror=()=>{ card.querySelector('.status').textContent='Connection error'; addLog(card,'Connection error'); };
+      socket.onclose=()=>{ card.querySelector('.status').textContent='Disconnected'; };
+      card.querySelector('.help').onclick=()=>socket.send(JSON.stringify({type:'help'}));
+      card.querySelector('.send').onclick=()=>{
+        const first=card.querySelector('.one').value.trim(), second=card.querySelector('.two').value.trim(); if(!first||!second)return;
+        const event=name==='chat'?{type:'message',text:second}:name==='ecommerce'?{type:'event',event:card.querySelector('.eventType').value==='inventory'?{type:'inventory',productId:first,quantity:Number(second)}:card.querySelector('.eventType').value==='price-drop'?{type:'price-drop',productId:first,price:Number(second)}:{type:'order-status',orderId:first,status:second}}:{type:'event',event:name==='trading'?{symbol:first,price:Number(second),action:'quote-update'}:{auctionId:first,amount:Number(second),action:'new-bid'}};
+        socket.send(JSON.stringify(event));
+      };
+    }
+    document.querySelectorAll('[data-service]').forEach(card=>connect(card,card.dataset.service));
+  </script>
+</body>
+</html>

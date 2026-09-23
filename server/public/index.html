@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket Chat</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #eef4ff;
+        margin: 0;
+        padding: 24px;
+      }
+      .chat-box {
+        max-width: 760px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 18px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background: #1d4ed8;
+        color: white;
+        padding: 16px 20px;
+        font-weight: bold;
+      }
+      #messages {
+        height: 360px;
+        overflow-y: auto;
+        padding: 18px;
+        background: #f8fbff;
+      }
+      .message {
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+      }
+      .message.system {
+        background: #fff4d6;
+        color: #7a5b00;
+      }
+      .message.chat {
+        background: #e8f1ff;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        padding: 16px;
+        background: #f2f6ff;
+      }
+      .help-btn {
+        background: #64748b;
+      }
+      input {
+        flex: 1;
+        border: 1px solid #cfd7e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      button {
+        background: #1d4ed8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        background: #163db7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-box">
+      <div class="header">WebSocket Chat Room</div>
+      <div id="messages"></div>
+      <div class="controls">
+        <input id="username" type="text" value="WebUser" placeholder="Your name" />
+        <input id="messageInput" type="text" placeholder="Type your message..." />
+        <button id="helpBtn" class="help-btn" type="button">Help</button>
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+
+    <script>
+      const basePath = window.location.pathname.startsWith('/chat') ? '/chat' : '';
+      const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${basePath}`);
+      const messagesEl = document.getElementById('messages');
+      const usernameInput = document.getElementById('username');
+      const messageInput = document.getElementById('messageInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const helpBtn = document.getElementById('helpBtn');
+
+      function addMessage(type, text, username = '') {
+        const line = document.createElement('div');
+        line.className = `message ${type}`;
+        if (type === 'system') {
+          line.innerHTML = '<strong>System:</strong> ' + text;
+        } else {
+          line.innerHTML = '<strong>' + username + ':</strong> ' + text;
+        }
+        messagesEl.appendChild(line);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      async function parseMessage(data) {
+        return JSON.parse(typeof data === 'string' ? data : await data.text());
+      }
+
+      socket.addEventListener('open', () => {
+        const username = (usernameInput.value || 'WebUser').trim();
+        socket.send(JSON.stringify({ type: 'join', username }));
+        addMessage('system', 'Connected to the chat server');
+      });
+
+      socket.addEventListener('message', async (event) => {
+        const data = await parseMessage(event.data);
+        if (data.type === 'system') {
+          addMessage('system', data.text);
+        } else if (data.type === 'message') {
+          addMessage('chat', data.text, data.username);
+        }
+      });
+
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        const username = (usernameInput.value || 'WebUser').trim();
+
+        if (!text) return;
+
+        socket.send(JSON.stringify({ type: 'join', username }));
+        socket.send(JSON.stringify({ type: 'message', text }));
+        messageInput.value = '';
+      }
+
+      sendBtn.addEventListener('click', sendMessage);
+      helpBtn.addEventListener('click', () => {
+        socket.send(JSON.stringify({ type: 'help' }));
+      });
+      messageInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          sendMessage();
+        }
+      });
+    </script>
+  </body>
+</html>
