@@ -13,6 +13,8 @@
     .log{height:150px;overflow:auto;background:#111827;color:#d8e4f0;border-radius:9px;padding:12px;font:13px ui-monospace,monospace;white-space:pre-wrap;margin-bottom:12px}
     .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}input,button{width:100%;padding:10px;border-radius:8px;font:inherit}input{border:1px solid #c9d3df}button{border:0;background:#2563eb;color:#fff;cursor:pointer}button.secondary{background:#64748b}.wide{grid-column:1/-1}
     .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}.summary div{background:#eef7f0;border-radius:7px;padding:8px;font-size:12px}.summary strong{display:block;color:#176b45;font-size:16px}
+    .mini{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px}.mini div{background:#eef2ff;border-radius:7px;padding:8px;font-size:12px}.mini strong{display:block;color:#1d4ed8;font-size:16px}
+    .typing{min-height:20px;color:#64748b;font-size:13px}.notice{min-height:20px;color:#b45309;font-size:13px}
     @media(max-width:760px){.grid{grid-template-columns:1fr}.shell{padding:22px 14px}}
   </style>
 </head>
@@ -24,7 +26,7 @@
     </header>
     <section class="grid">
       <article class="card" data-service="chat">
-        <h2>Chat</h2><p>Send a message to every connected chat client.</p><div class="status">Connecting...</div><div class="log"></div>
+        <h2>Live Chat Room</h2><p>Five simulated users, typing indicators, receipts, and idle notifications.</p><div class="status">Connecting...</div><div class="mini"><div>Participants<strong class="participantsValue">0</strong></div><div>Last Receipt<strong class="receiptValue">-</strong></div></div><div class="typing"></div><div class="notice"></div><div class="log"></div>
         <div class="controls"><input class="one" value="BrowserUser" placeholder="Username"><input class="two" placeholder="Message"><button class="send">Send message</button><button class="help secondary">Help</button></div>
       </article>
       <article class="card" data-service="ecommerce">
@@ -32,12 +34,12 @@
         <div class="controls"><select class="eventType"><option value="inventory">Inventory change</option><option value="price-drop">Price drop</option><option value="order-status">Order status</option></select><input class="one" value="SKU-1001" placeholder="Product or order ID"><input class="two" value="42" placeholder="Quantity, price, or status"><button class="send">Publish update</button><button class="help secondary">Help</button></div>
       </article>
       <article class="card" data-service="trading">
-        <h2>Trading Dashboard</h2><p>Publish live market quote events.</p><div class="status">Connecting...</div><div class="log"></div>
-        <div class="controls"><input class="one" value="AAPL" placeholder="Symbol"><input class="two" value="212.50" placeholder="Price"><button class="send">Publish quote</button><button class="help secondary">Help</button></div>
+        <h2>Trading Dashboard</h2><p>Live BTC/ETH prices, order books, orders, portfolio, and alerts.</p><div class="status">Connecting...</div><div class="mini"><div>BTC<strong class="btcValue">-</strong></div><div>ETH<strong class="ethValue">-</strong></div><div>Equity<strong class="equityValue">-</strong></div><div>Order<strong class="orderValue">-</strong></div></div><div class="log"></div>
+        <div class="controls"><select class="one"><option>BTC</option><option>ETH</option></select><select class="two"><option>buy</option><option>sell</option></select><input class="quantity" type="number" value="0.01" min="0.0001" step="0.0001" placeholder="Quantity"><button class="send">Execute order</button><button class="help secondary">Help</button></div>
       </article>
       <article class="card" data-service="bidding">
-        <h2>Live Bidding</h2><p>Publish auction bid events in real time.</p><div class="status">Connecting...</div><div class="log"></div>
-        <div class="controls"><input class="one" value="AUCTION-42" placeholder="Auction ID"><input class="two" value="125" placeholder="Bid amount"><button class="send">Place bid</button><button class="help secondary">Help</button></div>
+        <h2>Gold Necklace Auction</h2><p>Live bids, two-minute countdown, ordering, and winner notification.</p><div class="status">Connecting...</div><div class="mini"><div>Highest Bid<strong class="bidValue">₹50,000</strong></div><div>Auction closes in<strong class="timerValue">02:00</strong></div><div>Bidder<strong class="bidderValue">-</strong></div><div>Winner<strong class="winnerValue">-</strong></div></div><div class="log"></div>
+        <div class="controls"><input class="one" value="BrowserUser" placeholder="Bidder"><input class="two" type="number" value="51000" min="50001" placeholder="Bid amount"><button class="send">Place bid</button><button class="help secondary">Help</button></div>
       </article>
     </section>
   </main>
@@ -56,7 +58,12 @@
         if(data.type==='market-update') return `Market stream: BTC $${data.markets.BTC.last} | ETH $${data.markets.ETH.last}`;
         return `${data.event?.symbol || 'market'} -> ${data.event?.price || data.event?.action || 'updated'}`;
       } },
-      bidding: { path:'/bidding', event(data){ return `${data.event.auctionId || 'auction'} -> bid ${data.event.amount || 'updated'}`; } }
+      bidding: { path:'/bidding', event(data){
+        if(data.type==='auction-snapshot') return `Auction: ${data.auction.title} | highest ₹${data.auction.currentBid}`;
+        if(data.type==='bid-update') return `${data.bid.bidder} -> ₹${data.bid.amount} (#${data.bid.sequence})`;
+        if(data.type==='auction-closed') return data.winner ? `Winner: ${data.winner.bidder} -> ₹${data.winner.amount}` : 'Auction closed without bids';
+        return data.text || data.type;
+      } }
     };
     const sockets = {};
     async function parseMessage(data){ return JSON.parse(typeof data === 'string' ? data : await data.text()); }
@@ -66,16 +73,52 @@
       if(event.type==='price-drop'){card.querySelector('.priceValue').textContent=`$${event.price ?? '-'}`; addLog(card,`${event.productId || 'product'} -> price $${event.price}`);}
       if(event.type==='order-status'){card.querySelector('.orderValue').textContent=event.status || '-'; addLog(card,`${event.orderId || 'order'} -> ${event.status}`);}
     }
+    function updateTrading(card, data){
+      if(data.type==='trading-snapshot' || data.type==='market-update'){
+        const btc=data.markets.BTC; const eth=data.markets.ETH;
+        card.querySelector('.btcValue').textContent=`$${btc.last.toLocaleString()}`;
+        card.querySelector('.ethValue').textContent=`$${eth.last.toLocaleString()}`;
+        if(data.portfolio) card.querySelector('.equityValue').textContent=`$${data.portfolio.equity.toLocaleString()}`;
+        if(data.type==='trading-snapshot') addLog(card,'BTC/ETH market stream connected');
+        return;
+      }
+      if(data.type==='order-status'){card.querySelector('.orderValue').textContent=data.order.status;addLog(card,`${data.order.id} -> ${data.order.status}`);}
+      if(data.type==='portfolio-update'){card.querySelector('.equityValue').textContent=`$${data.portfolio.equity.toLocaleString()}`;addLog(card,`Portfolio updated after ${data.trade.id}`);}
+      if(data.type==='price-alert') addLog(card,`ALERT: ${data.symbol} crossed ${data.threshold}`);
+      if(data.type==='error'||data.type==='help') addLog(card,data.text);
+    }
+    function updateBidding(card, data){
+      if(data.type==='auction-snapshot'){
+        card.querySelector('.bidValue').textContent=`₹${data.auction.currentBid.toLocaleString('en-IN')}`;
+        card.querySelector('.bidderValue').textContent=data.auction.highestBidder || '-';
+        card.querySelector('.winnerValue').textContent=data.winner?.bidder || '-';
+        card._auctionEndsAt=data.auction.endsAt ? new Date(data.auction.endsAt).getTime() : 0;
+        addLog(card,`Auction ${data.auction.status}: ₹${data.auction.currentBid.toLocaleString('en-IN')}`);
+      }
+      if(data.type==='bid-update'){card.querySelector('.bidValue').textContent=`₹${data.bid.amount.toLocaleString('en-IN')}`;card.querySelector('.bidderValue').textContent=data.bid.bidder;addLog(card,`${data.bid.bidder} -> ₹${data.bid.amount.toLocaleString('en-IN')} (#${data.bid.sequence})`);}
+      if(data.type==='auction-closed'){card.querySelector('.winnerValue').textContent=data.winner?.bidder || 'No bids';addLog(card,data.winner?`Winner: ${data.winner.bidder} at ₹${data.winner.amount.toLocaleString('en-IN')}`:'Auction closed');}
+      if(data.type==='bid-error'||data.type==='help') addLog(card,data.text);
+    }
+    function updateChat(card, data){
+      if(data.type==='chat-snapshot'){card.querySelector('.participantsValue').textContent=data.users.length;addLog(card,`Chat ready with ${data.users.length} simulated users`);return;}
+      if(data.type==='user-joined'){addLog(card,`${data.username} joined`);return;}
+      if(data.type==='typing'){card.querySelector('.typing').textContent=data.composing?`${data.username} is typing...`:'';return;}
+      if(data.type==='chat-message'){addLog(card,`#${data.message.sequence} ${data.message.username}: ${data.message.text}`);return;}
+      if(data.type==='delivery-receipt'){card.querySelector('.receiptValue').textContent=data.status;addLog(card,`${data.messageId} ${data.username}: ${data.status}`);return;}
+      if(data.type==='idle-notification'){card.querySelector('.notice').textContent=data.text;addLog(card,data.text);return;}
+      if(data.type==='system'||data.type==='help') addLog(card,data.text);
+    }
     function connect(card, name){
       const config=configs[name]; const socket=new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}${config.path}`); sockets[name]=socket;
+      if(name==='bidding') setInterval(()=>{if(!card._auctionEndsAt)return;const seconds=Math.max(0,Math.ceil((card._auctionEndsAt-Date.now())/1000));card.querySelector('.timerValue').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;},250);
       socket.onopen=()=>{ card.querySelector('.status').textContent='Connected'; card.querySelector('.status').classList.add('connected'); addLog(card,'Connected'); if(name==='chat') socket.send(JSON.stringify({type:'join',username:card.querySelector('.one').value})); };
-      socket.onmessage=async(event)=>{ const data=await parseMessage(event.data); if(data.type==='snapshot') addLog(card,`Snapshot loaded: ${data.state.events.length} events`); else if(name==='ecommerce' && data.type==='product-update') updateEcommerce(card,data.event); else addLog(card,config.event(data)); };
+      socket.onmessage=async(event)=>{ const data=await parseMessage(event.data); if(name==='chat') updateChat(card,data); else if(name==='ecommerce' && data.type==='product-update') updateEcommerce(card,data.event); else if(name==='trading') updateTrading(card,data); else if(name==='bidding') updateBidding(card,data); else if(data.type==='snapshot') addLog(card,`Snapshot loaded: ${data.state.events.length} events`); else addLog(card,config.event(data)); };
       socket.onerror=()=>{ card.querySelector('.status').textContent='Connection error'; addLog(card,'Connection error'); };
       socket.onclose=()=>{ card.querySelector('.status').textContent='Disconnected'; };
       card.querySelector('.help').onclick=()=>socket.send(JSON.stringify({type:'help'}));
       card.querySelector('.send').onclick=()=>{
         const first=card.querySelector('.one').value.trim(), second=card.querySelector('.two').value.trim(); if(!first||!second)return;
-        const event=name==='chat'?{type:'message',text:second}:name==='ecommerce'?{type:'event',event:card.querySelector('.eventType').value==='inventory'?{type:'inventory',productId:first,quantity:Number(second)}:card.querySelector('.eventType').value==='price-drop'?{type:'price-drop',productId:first,price:Number(second)}:{type:'order-status',orderId:first,status:second}}:{type:'event',event:name==='trading'?{symbol:first,price:Number(second),action:'quote-update'}:{auctionId:first,amount:Number(second),action:'new-bid'}};
+        const event=name==='chat'?{type:'message',text:second}:name==='ecommerce'?{type:'event',event:card.querySelector('.eventType').value==='inventory'?{type:'inventory',productId:first,quantity:Number(second)}:card.querySelector('.eventType').value==='price-drop'?{type:'price-drop',productId:first,price:Number(second)}:{type:'order-status',orderId:first,status:second}}:name==='trading'?{type:'execute-order',order:{symbol:first,side:second,quantity:Number(card.querySelector('.quantity').value)}}:{type:'place-bid',bidder:first,amount:Number(second)};
         socket.send(JSON.stringify(event));
       };
     }
