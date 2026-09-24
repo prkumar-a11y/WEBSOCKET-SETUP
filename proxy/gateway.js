@@ -5,11 +5,12 @@ const WebSocket = require('../server/node_modules/ws');
 
 const PORT = Number(process.env.PORT || 8000);
 const routes = {
-  '/chat': 8081,
-  '/ecommerce': 8082,
-  '/trading': 8083,
-  '/bidding': 8084,
+  '/chat': { host: process.env.CHAT_HOST || 'localhost', port: 8081 },
+  '/ecommerce': { host: process.env.ECOMMERCE_HOST || 'localhost', port: 8082 },
+  '/trading': { host: process.env.TRADING_HOST || 'localhost', port: 8083 },
+  '/bidding': { host: process.env.BIDDING_HOST || 'localhost', port: 8084 },
 };
+const helpPage = path.join(__dirname, 'public', 'help.html');
 
 function routeFor(url) {
   return Object.entries(routes).find(([prefix]) => url === prefix || url.startsWith(`${prefix}/`));
@@ -21,6 +22,19 @@ function targetPath(url, prefix) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.url === '/help' || req.url === '/help/') {
+    fs.readFile(helpPage, (error, content) => {
+      if (error) {
+        res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end('Help page unavailable');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(content);
+    });
+    return;
+  }
+
   const route = routeFor(req.url);
   if (!route) {
     if (req.url !== '/') {
@@ -40,10 +54,10 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const [prefix, port] = route;
+  const [prefix, target] = route;
   const proxyRequest = http.request({
-    hostname: 'localhost',
-    port,
+    hostname: target.host,
+    port: target.port,
     method: req.method,
     path: targetPath(req.url, prefix),
     headers: { ...req.headers, host: `localhost:${port}` },
@@ -67,9 +81,9 @@ server.on('upgrade', (req, socket, head) => {
     return;
   }
 
-  const [prefix, port] = route;
+  const [prefix, target] = route;
   wss.handleUpgrade(req, socket, head, (client) => {
-    const upstream = new WebSocket(`ws://localhost:${port}`, {
+    const upstream = new WebSocket(`ws://${target.host}:${target.port}`, {
       headers: { 'x-forwarded-path': targetPath(req.url, prefix) },
     });
     const pending = [];

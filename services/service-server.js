@@ -14,6 +14,11 @@ const state = {
   events: [],
 };
 
+const helpText = {
+  'E-Commerce Live Updates': 'E-Commerce streams inventory, price-drop, and order-status events over WebSocket. Use the update selector to publish an event; connected customers update without refreshing. HTTP API: POST /api/events and GET /api/state.',
+  'Realtime Service': 'Send POST /api/events to publish a validated update. Connected WebSocket clients receive it immediately, and GET /api/state returns recent events.',
+};
+
 function sendJson(res, status, payload) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(payload));
@@ -106,7 +111,7 @@ wss.on('connection', (ws) => {
     if (message.type === 'help') {
       ws.send(JSON.stringify({
         type: 'help',
-        text: `This is the ${serviceName}. Send POST /api/events to publish updates or use the browser form.`,
+        text: helpText[serviceName] || helpText['Realtime Service'],
       }));
       return;
     }

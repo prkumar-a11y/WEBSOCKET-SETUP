@@ -1,0 +1,74 @@
+services:
+  chat:
+    build: .
+    command: node server/server.js
+    environment:
+      PORT: 8081
+    expose:
+      - "8081"
+    restart: unless-stopped
+
+  ecommerce:
+    build: .
+    command: node services/ecommerce/server.js
+    environment:
+      PORT: 8082
+    expose:
+      - "8082"
+    restart: unless-stopped
+
+  trading:
+    build: .
+    command: node services/trading/server.js
+    environment:
+      PORT: 8083
+    expose:
+      - "8083"
+    restart: unless-stopped
+
+  bidding:
+    build: .
+    command: node services/bidding/server.js
+    environment:
+      PORT: 8084
+    expose:
+      - "8084"
+    restart: unless-stopped
+
+  gateway:
+    build: .
+    command: node proxy/gateway.js
+    environment:
+      PORT: 8000
+      CHAT_HOST: chat
+      ECOMMERCE_HOST: ecommerce
+      TRADING_HOST: trading
+      BIDDING_HOST: bidding
+    expose:
+      - "8000"
+    depends_on:
+      - chat
+      - ecommerce
+      - trading
+      - bidding
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

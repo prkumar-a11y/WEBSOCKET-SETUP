@@ -85,3 +85,41 @@ curl -X POST http://localhost:8000/trading/api/events \
 ```
 
 The matching browser dashboard receives the event immediately.
+
+## Ubuntu Docker deployment
+
+The production deployment runs the four applications and Node gateway on a private Docker network. Caddy is the public edge proxy and exposes only ports `80` and `443`; it forwards HTTP and WebSocket traffic to the gateway.
+
+| Public endpoint | Destination |
+| --- | --- |
+| `http://HOST/` | Caddy -> gateway -> applications |
+| `https://HOST/` | Caddy TLS -> gateway -> applications |
+
+Internal application ports remain private:
+
+| Service | Container port |
+| --- | ---: |
+| Chat | 8081 |
+| E-Commerce | 8082 |
+| Trading | 8083 |
+| Bidding | 8084 |
+| Gateway | 8000 |
+
+On Ubuntu:
+
+```bash
+cd websocket-chat-room
+cp .env.example .env
+# Edit .env and set DOMAIN to a DNS name pointing to this server.
+sudo ./deploy/setup-ubuntu.sh
+```
+
+The script installs Docker and the Compose plugin when missing, builds all containers, and starts the stack. Caddy automatically obtains and renews a public certificate when `DOMAIN` resolves to the Ubuntu host and ports 80/443 are reachable. For local testing, set `DOMAIN=localhost`; browsers will not trust Caddy's local certificate without an explicit trust setup.
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f caddy gateway
+docker compose down
+```

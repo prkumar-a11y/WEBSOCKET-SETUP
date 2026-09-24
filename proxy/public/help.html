@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebSocket Applications Help</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#182334;background:#eef3f8}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1000px;margin:auto;padding:32px 18px}.hero,.card{background:#fff;border:1px solid #d7e0e9;border-radius:14px;padding:22px;box-shadow:0 8px 22px #20364d12}.hero{margin-bottom:16px}h1{margin:0 0 8px;color:#1d4ed8}.intro{color:#5f6f80}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card h2{margin:0 0 8px}.card p{color:#5f6f80;line-height:1.5}.card ul{padding-left:20px;line-height:1.7}.route{display:inline-block;margin-top:8px;padding:7px 10px;border-radius:7px;background:#edf3ff;color:#1d4ed8;font-family:ui-monospace,monospace;font-size:13px}a.back{display:inline-block;margin-top:20px;color:#1d4ed8}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>WebSocket Applications Help</h1>
+      <p class="intro">Each application connects through the proxy on port 8000. Help buttons open this page so the live behavior and test actions are in one place.</p>
+    </section>
+    <section class="grid">
+      <article class="card">
+        <h2>Chat</h2>
+        <p>Five simulated users join the room. They type and publish messages every three seconds.</p>
+        <ul><li>Messages receive increasing sequence numbers.</li><li>Typing indicators show who is composing.</li><li>Receipts move from delivered to read.</li><li>Idle users receive new-message notifications.</li></ul>
+        <span class="route">/chat</span>
+      </article>
+      <article class="card">
+        <h2>E-Commerce Live Updates</h2>
+        <p>Customers receive changes without refreshing the page.</p>
+        <ul><li>Publish inventory changes.</li><li>Broadcast price drops.</li><li>Push order-status updates.</li><li>Use the event feed to see each update.</li></ul>
+        <span class="route">/ecommerce</span>
+      </article>
+      <article class="card">
+        <h2>Trading Dashboard</h2>
+        <p>The dashboard streams a simulated market continuously.</p>
+        <ul><li>BTC and ETH prices update every second.</li><li>Each market shows top-10 bid and ask levels.</li><li>Orders emit pending and filled notifications.</li><li>Portfolio balances change after trades.</li><li>Price alerts fire when thresholds are crossed.</li></ul>
+        <span class="route">/trading</span>
+      </article>
+      <article class="card">
+        <h2>Gold Necklace Auction</h2>
+        <p>The auction starts at ₹50,000 when the first client connects.</p>
+        <ul><li>Simulated users bid every two seconds.</li><li>The countdown runs for two minutes.</li><li>Concurrent bids receive ordered sequence numbers.</li><li>The highest valid bid wins.</li><li>A winner notification is sent at closing.</li></ul>
+        <span class="route">/bidding</span>
+      </article>
+    </section>
+    <a class="back" href="/">Back to applications</a>
+  </main>
+</body>
+</html>

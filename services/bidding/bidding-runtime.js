@@ -124,7 +124,7 @@ wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
     let message;
     try { message = JSON.parse(raw); } catch { return; }
-    if (message.type === 'help') return ws.send(JSON.stringify({ type: 'help', text: 'Gold necklace auction starts at ₹50,000. Bids are processed in arrival order and the highest bid wins.' }));
+    if (message.type === 'help') return ws.send(JSON.stringify({ type: 'help', text: 'Gold Necklace auction starts at ₹50,000 and runs for two minutes after the first connection. Simulated users bid every two seconds. Bids are serialized with sequence numbers, the highest valid bid wins, and auction-closed sends the winner. HTTP API: POST /api/bids and GET /api/state.' }));
     if (message.type === 'place-bid') {
       const result = await queueBid(message);
       if (result.error) ws.send(JSON.stringify({ type: 'bid-error', text: result.error }));

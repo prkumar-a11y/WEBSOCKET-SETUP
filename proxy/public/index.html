@@ -115,7 +115,7 @@
       socket.onmessage=async(event)=>{ const data=await parseMessage(event.data); if(name==='chat') updateChat(card,data); else if(name==='ecommerce' && data.type==='product-update') updateEcommerce(card,data.event); else if(name==='trading') updateTrading(card,data); else if(name==='bidding') updateBidding(card,data); else if(data.type==='snapshot') addLog(card,`Snapshot loaded: ${data.state.events.length} events`); else addLog(card,config.event(data)); };
       socket.onerror=()=>{ card.querySelector('.status').textContent='Connection error'; addLog(card,'Connection error'); };
       socket.onclose=()=>{ card.querySelector('.status').textContent='Disconnected'; };
-      card.querySelector('.help').onclick=()=>socket.send(JSON.stringify({type:'help'}));
+      card.querySelector('.help').onclick=()=>{window.location.href='/help';};
       card.querySelector('.send').onclick=()=>{
         const first=card.querySelector('.one').value.trim(), second=card.querySelector('.two').value.trim(); if(!first||!second)return;
         const event=name==='chat'?{type:'message',text:second}:name==='ecommerce'?{type:'event',event:card.querySelector('.eventType').value==='inventory'?{type:'inventory',productId:first,quantity:Number(second)}:card.querySelector('.eventType').value==='price-drop'?{type:'price-drop',productId:first,price:Number(second)}:{type:'order-status',orderId:first,status:second}}:name==='trading'?{type:'execute-order',order:{symbol:first,side:second,quantity:Number(card.querySelector('.quantity').value)}}:{type:'place-bid',bidder:first,amount:Number(second)};

@@ -144,7 +144,7 @@ wss.on('connection', ws => {
   ws.on('message', raw => {
     let message;
     try { message = JSON.parse(raw); } catch { return; }
-    if (message.type === 'help') return ws.send(JSON.stringify({ type: 'help', text: 'Streams BTC/ETH market data every second. Commands: execute-order, set-alert, cancel-alert.' }));
+    if (message.type === 'help') return ws.send(JSON.stringify({ type: 'help', text: 'Trading streams BTC and ETH prices, bid/ask quotes, and top-10 order-book levels every second. Execute buy/sell orders to receive pending and filled statuses plus portfolio updates. Set above/below alerts for threshold notifications. HTTP API: POST /api/orders and GET /api/state.' }));
     if (message.type === 'execute-order') {
       const result = executeOrder(message.order || {});
       if (result.error) ws.send(JSON.stringify({ type: 'error', text: result.error }));

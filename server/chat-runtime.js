@@ -118,7 +118,7 @@ wss.on('connection', ws => {
       publishMessage(client.username, String(data.text || '').slice(0, 2000));
       return;
     }
-    if (data.type === 'help') ws.send(JSON.stringify({ type: 'system', text: 'Five users simulate typing and messages every 3 seconds. Messages receive delivered/read receipts. Keep this tab active to suppress idle notifications.' }));
+    if (data.type === 'help') ws.send(JSON.stringify({ type: 'system', text: 'Chat simulates Alice, Bob, Carol, Dave, and Eve. Users type and send messages every 3 seconds. Each message gets an increasing sequence number, delivered/read receipts, and an idle notification when this tab is inactive. Type a message and press Send to publish your own message.' }));
   });
   ws.on('close', () => clients.delete(ws));
 });
